@@ -46,7 +46,9 @@ io.on('connection', (socket) => {
         currentQuestion: 0,
         questions: [],
         scores: new Map(),
-        answeredPlayers: new Set()
+        answeredPlayers: new Set(),
+        timer: null,
+        questionStartTime: null
       }
     };
 
@@ -219,6 +221,17 @@ io.on('connection', (socket) => {
 
     // Check if all players have answered
     if (room.gameState.answeredPlayers.size === room.players.size) {
+      // Clear the timer since everyone answered
+      if (room.gameState.timer) {
+        clearTimeout(room.gameState.timer);
+        room.gameState.timer = null;
+      }
+
+      // Notify all players that everyone has answered
+      io.to(roomCode).emit('allAnswered', {
+        correctAnswer: room.gameState.questions[currentQ].name
+      });
+
       // Notify host to show next question button
       io.to(room.host).emit('allPlayersAnswered');
     }
@@ -271,6 +284,12 @@ function sendNextQuestion(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
+  // Clear any existing timer
+  if (room.gameState.timer) {
+    clearTimeout(room.gameState.timer);
+    room.gameState.timer = null;
+  }
+
   room.gameState.currentQuestion++;
   const questionIndex = room.gameState.currentQuestion - 1;
 
@@ -297,14 +316,38 @@ function sendNextQuestion(roomCode) {
   // Clear answered players for new question
   room.gameState.answeredPlayers.clear();
 
+  // Record question start time
+  room.gameState.questionStartTime = Date.now();
+
   io.to(roomCode).emit('newQuestion', {
     questionNumber: room.gameState.currentQuestion,
     totalQuestions: room.gameState.questions.length,
     image: question.image,
-    options: question.options // Options should be generated client-side with the same seed
+    correctAnswer: question.name // Send correct answer for client validation
   });
 
+  // Start 30-second timer
+  room.gameState.timer = setTimeout(() => {
+    handleTimeExpired(roomCode);
+  }, 30000);
+
   console.log(`Question ${room.gameState.currentQuestion} sent to room ${roomCode}`);
+}
+
+// Handle when timer expires
+function handleTimeExpired(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  console.log(`Timer expired for room ${roomCode}`);
+
+  // Notify all players that time is up
+  io.to(roomCode).emit('timeExpired', {
+    correctAnswer: room.gameState.questions[room.gameState.currentQuestion - 1].name
+  });
+
+  // Notify host to show next question button
+  io.to(room.host).emit('allPlayersAnswered');
 }
 
 const PORT = process.env.PORT || 3000;

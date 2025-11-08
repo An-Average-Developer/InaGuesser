@@ -9,6 +9,12 @@ let playerName = '';
 let roomCode = '';
 let isHost = false;
 let questionStartTime = 0;
+let timerInterval = null;
+let timeRemaining = 30;
+let currentCorrectAnswer = '';
+let hasAnswered = false;
+let mySelectedAnswer = '';
+let mySelectedButton = null;
 
 // DOM elements - Screens
 const modeScreen = document.getElementById('mode-screen');
@@ -59,6 +65,9 @@ const multiplayerResults = document.getElementById('multiplayer-results');
 const finalStandings = document.getElementById('final-standings');
 const nextQuestionContainer = document.getElementById('next-question-container');
 const nextQuestionBtn = document.getElementById('next-question-btn');
+const timerContainer = document.getElementById('timer-container');
+const timerBar = document.getElementById('timer-bar');
+const timerText = document.getElementById('timer-text');
 
 // ===========================================
 // SOCKET.IO CONNECTION (MULTIPLAYER)
@@ -104,13 +113,18 @@ function initSocket() {
         scoreElement.textContent = 0;
         liveScoreboard.style.display = 'block';
         nextQuestionContainer.style.display = 'none';
+        timerContainer.style.display = 'none';
+        hasAnswered = false;
+        mySelectedAnswer = '';
+        mySelectedButton = null;
         showScreen('game');
     });
 
-    socket.on('newQuestion', ({ questionNumber, totalQuestions, image, options }) => {
+    socket.on('newQuestion', ({ questionNumber, totalQuestions, image, correctAnswer }) => {
         currentQuestion = questionNumber;
         currentElement.textContent = questionNumber;
         totalElement.textContent = totalQuestions;
+        currentCorrectAnswer = correctAnswer;
 
         // Find the location from the image
         const location = locations.find(loc => loc.image === image);
@@ -118,23 +132,20 @@ function initSocket() {
             loadMultiplayerQuestion(location);
         }
 
+        // Start timer
+        startTimer();
         questionStartTime = Date.now();
     });
 
     socket.on('answerResult', ({ isCorrect, correctAnswer, points, totalScore }) => {
+        // Update score silently (feedback will be shown when timer completes)
         score = totalScore;
         scoreElement.textContent = score;
 
-        const allButtons = optionsContainer.querySelectorAll('.option-btn');
-        allButtons.forEach(btn => btn.disabled = true);
-
-        if (isCorrect) {
-            feedbackElement.textContent = `Correct! +${points} points`;
-            feedbackElement.className = 'feedback correct';
-        } else {
-            feedbackElement.textContent = `Wrong! It was ${correctAnswer}`;
-            feedbackElement.className = 'feedback incorrect';
-        }
+        // Show a subtle "Answer submitted!" message
+        feedbackElement.textContent = 'Answer submitted! Waiting for other players...';
+        feedbackElement.className = 'feedback';
+        feedbackElement.style.color = '#667eea';
     });
 
     socket.on('scoresUpdated', (scores) => {
@@ -142,7 +153,61 @@ function initSocket() {
     });
 
     socket.on('gameOver', ({ scores }) => {
+        stopTimer();
+        timerContainer.style.display = 'none';
         showMultiplayerResults(scores);
+    });
+
+    socket.on('timeExpired', ({ correctAnswer }) => {
+        // Time ran out - disable all buttons and show correct answer
+        stopTimer();
+        disableAllOptions();
+        showCorrectAnswer(correctAnswer);
+
+        // Show personalized feedback based on whether player answered
+        if (hasAnswered) {
+            if (mySelectedAnswer === correctAnswer) {
+                feedbackElement.textContent = `Time's up! You were correct: ${correctAnswer}`;
+                feedbackElement.className = 'feedback correct';
+                feedbackElement.style.color = '#4CAF50';
+            } else {
+                feedbackElement.textContent = `Time's up! You selected "${mySelectedAnswer}". Correct answer: ${correctAnswer}`;
+                feedbackElement.className = 'feedback incorrect';
+                feedbackElement.style.color = '#dc3545';
+            }
+        } else {
+            feedbackElement.textContent = `Time's up! You didn't answer. Correct answer: ${correctAnswer}`;
+            feedbackElement.className = 'feedback incorrect';
+            feedbackElement.style.color = '#dc3545';
+        }
+    });
+
+    socket.on('allAnswered', ({ correctAnswer }) => {
+        // Everyone answered - show message and complete timer quickly
+        feedbackElement.textContent = 'Everyone answered!';
+        feedbackElement.className = 'feedback';
+        feedbackElement.style.color = '#667eea';
+        feedbackElement.style.fontWeight = 'bold';
+
+        completeTimerInstantly(() => {
+            disableAllOptions();
+            showCorrectAnswer(correctAnswer);
+
+            // Show personalized feedback
+            if (mySelectedAnswer === correctAnswer) {
+                feedbackElement.textContent = `Correct! The answer was ${correctAnswer}`;
+                feedbackElement.className = 'feedback correct';
+                feedbackElement.style.color = '#4CAF50';
+            } else if (hasAnswered) {
+                feedbackElement.textContent = `Wrong! You selected "${mySelectedAnswer}". Correct answer: ${correctAnswer}`;
+                feedbackElement.className = 'feedback incorrect';
+                feedbackElement.style.color = '#dc3545';
+            } else {
+                feedbackElement.textContent = `Time's up! Correct answer: ${correctAnswer}`;
+                feedbackElement.className = 'feedback incorrect';
+                feedbackElement.style.color = '#dc3545';
+            }
+        });
     });
 
     socket.on('allPlayersAnswered', () => {
@@ -186,6 +251,108 @@ function showScreen(screenName) {
 // ===========================================
 // MULTIPLAYER FUNCTIONS
 // ===========================================
+function startTimer() {
+    timeRemaining = 30;
+    timerContainer.style.display = 'block';
+    timerText.textContent = timeRemaining;
+    timerBar.style.width = '100%';
+    timerBar.className = 'timer-bar';
+
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+        timerText.textContent = timeRemaining;
+
+        // Update timer bar width
+        const percentage = (timeRemaining / 30) * 100;
+        timerBar.style.width = percentage + '%';
+
+        // Change color based on time remaining
+        if (timeRemaining <= 5) {
+            timerBar.className = 'timer-bar danger';
+        } else if (timeRemaining <= 10) {
+            timerBar.className = 'timer-bar warning';
+        }
+
+        if (timeRemaining <= 0) {
+            stopTimer();
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function completeTimerInstantly(callback) {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // Animate timer completing quickly
+    const startTime = timeRemaining;
+    const duration = 1000; // 1 second animation
+    const startTimestamp = Date.now();
+
+    timerBar.className = 'timer-bar danger';
+
+    const animateTimer = setInterval(() => {
+        const elapsed = Date.now() - startTimestamp;
+        const progress = Math.min(elapsed / duration, 1);
+
+        timeRemaining = Math.floor(startTime * (1 - progress));
+        timerText.textContent = timeRemaining;
+
+        const percentage = (timeRemaining / 30) * 100;
+        timerBar.style.width = percentage + '%';
+
+        if (progress >= 1) {
+            clearInterval(animateTimer);
+            timeRemaining = 0;
+            timerText.textContent = 0;
+            timerBar.style.width = '0%';
+            if (callback) callback();
+        }
+    }, 16); // ~60fps
+}
+
+function disableAllOptions() {
+    const allButtons = optionsContainer.querySelectorAll('.option-btn');
+    allButtons.forEach(btn => btn.disabled = true);
+}
+
+function showCorrectAnswer(correctAnswer) {
+    const allButtons = optionsContainer.querySelectorAll('.option-btn');
+    allButtons.forEach(btn => {
+        // Reset styling
+        btn.style.opacity = '1';
+        btn.style.border = '2px solid #dee2e6';
+
+        // Highlight correct answer in green
+        if (btn.textContent === correctAnswer) {
+            btn.classList.add('correct');
+        }
+
+        // Highlight player's selected answer
+        if (mySelectedButton && btn === mySelectedButton) {
+            if (mySelectedAnswer === correctAnswer) {
+                // Player was correct - already green
+                btn.classList.add('correct');
+            } else {
+                // Player was wrong - show in red
+                btn.classList.add('incorrect');
+            }
+        }
+    });
+}
+
 function updatePlayerList(players) {
     playersList.innerHTML = '';
     playerCount.textContent = players.length;
@@ -255,10 +422,17 @@ function loadMultiplayerQuestion(currentLocation) {
     locationImage.alt = "Guess this location!";
     feedbackElement.textContent = '';
     feedbackElement.className = 'feedback';
+    feedbackElement.style.color = '';
 
     // Hide next question button
     nextQuestionContainer.style.display = 'none';
 
+    // Reset answer state
+    hasAnswered = false;
+    mySelectedAnswer = '';
+    mySelectedButton = null;
+
+    // Generate options with randomization for each player
     generateOptions(currentLocation);
 }
 
@@ -280,6 +454,7 @@ function initGame() {
     totalElement.textContent = gameLocations.length;
     currentElement.textContent = currentQuestion + 1;
     liveScoreboard.style.display = 'none';
+    timerContainer.style.display = 'none';
 
     showScreen('game');
     loadQuestion();
@@ -344,6 +519,8 @@ function generateOptions(correctLocation) {
         const button = document.createElement('button');
         button.className = 'option-btn';
         button.textContent = location.name;
+        button.style.opacity = '1';
+        button.style.border = '2px solid #dee2e6';
 
         if (isMultiplayer) {
             button.addEventListener('click', () => checkMultiplayerAnswer(location.name, correctLocation.name, button));
@@ -384,21 +561,22 @@ function checkAnswer(selectedAnswer, correctAnswer, button) {
 }
 
 function checkMultiplayerAnswer(selectedAnswer, correctAnswer, button) {
+    // Prevent multiple submissions
+    if (hasAnswered) return;
+    hasAnswered = true;
+
+    // Store player's selection
+    mySelectedAnswer = selectedAnswer;
+    mySelectedButton = button;
+
     const allButtons = optionsContainer.querySelectorAll('.option-btn');
     allButtons.forEach(btn => btn.disabled = true);
 
     const timeTaken = Date.now() - questionStartTime;
 
-    if (selectedAnswer === correctAnswer) {
-        button.classList.add('correct');
-    } else {
-        button.classList.add('incorrect');
-        allButtons.forEach(btn => {
-            if (btn.textContent === correctAnswer) {
-                btn.classList.add('correct');
-            }
-        });
-    }
+    // Mark the selected answer (but don't show if it's correct yet)
+    button.style.opacity = '0.7';
+    button.style.border = '3px solid #667eea';
 
     socket.emit('submitAnswer', {
         answer: selectedAnswer,
