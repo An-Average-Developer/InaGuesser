@@ -1,0 +1,5 @@
+Place your Inazuma Eleven location screenshots in this folder.
+
+Supported formats: .jpg, .png, .gif, .webp
+
+Remember to update locations.js with the names and file paths of your screenshots!
