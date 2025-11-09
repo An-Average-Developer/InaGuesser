@@ -1,34 +1,34 @@
 const locations = [
     {
-        name: "Raimon Soccer Field",
+        name: "Campo del Raimon",
         image: "images/locations/raimon-field.jpg"
     },
     {
-        name: "Inazuma Tower",
+        name: "Torre Inazuma",
         image: "images/locations/inazuma-tower.jpg"
     },
     {
-        name: "Endou's House",
-        image: "images/locations/endou-house.jpg"
+        name: "Casa de Mark",
+        image: "images/locations/casa-de-mark.jpg"
     },
     {
-        name: "Teikoku Academy",
-        image: "images/locations/teikoku-academy.jpg"
+        name: "Estacion Inazuma",
+        image: "images/locations/estacion-inazuma.jpg"
     },
     {
-        name: "Aliea Academy Ship",
-        image: "images/locations/aliea-ship.jpg"
+        name: "Ribera del Rio",
+        image: "images/locations/ribera-del-rio.jpg"
     },
     {
-        name: "Riverbank",
-        image: "images/locations/riverbank.jpg"
-    },
-    {
-        name: "Raimon Junior High Entrance",
+        name: "Entrada del Instituto Raimon",
         image: "images/locations/raimon-entrance.jpg"
     },
     {
-        name: "Soccer Museum",
-        image: "images/locations/soccer-museum.jpg"
+        name: "Guarida del Gimanasio del Raimon",
+        image: "images/locations/guarida-raimon-gimnasio.jpg"
+    },
+    {
+        name: "Salon de Mark",
+        image: "images/locations/salon-de-mark.jpg"
     }
 ];
