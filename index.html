@@ -72,6 +72,17 @@
                 <button id="back-btn" class="btn btn-secondary">Back</button>
             </div>
 
+            <!-- Zone Selection Screen -->
+            <div id="zone-screen" class="screen">
+                <h2>Select a Zone</h2>
+                <p>Click on a zone in the map to play</p>
+                <div class="map-container">
+                    <img id="general-map" src="images/locations/maps/Inazuma Eleven 1/General Map.jpg" alt="General Map" usemap="#zone-map">
+                    <canvas id="map-canvas"></canvas>
+                </div>
+                <button id="back-from-zone-btn" class="btn btn-secondary">Back</button>
+            </div>
+
             <!-- Game Screen -->
             <div id="game-screen" class="screen">
                 <!-- Timer (Multiplayer only) -->
@@ -82,15 +93,41 @@
                     <div class="timer-text">Time: <span id="timer-text">30</span>s</div>
                 </div>
 
-                <div class="image-container">
-                    <img id="location-image" src="" alt="Location">
-                </div>
+                <div class="game-layout">
+                    <div class="game-question-panel">
+                        <h3>Find this location:</h3>
+                        <div class="game-badge" id="game-badge">Inazuma Eleven 1</div>
+                        <div class="location-display">
+                            <div class="location-image-container">
+                                <img id="location-image" src="" alt="Location to find">
+                            </div>
+                        </div>
+                        <div class="instructions">
+                            <p id="instruction-text">Click on the zone in the map</p>
+                        </div>
+                    </div>
 
-                <div class="options-container" id="options-container">
-                    <!-- Options will be generated dynamically -->
-                </div>
+                    <div class="game-map-panel">
+                        <!-- Map view -->
+                        <div id="map-view" class="map-view">
+                            <div class="game-map-container" id="game-map-container">
+                                <img id="game-map-image" src="images/locations/maps/Inazuma Eleven 1/General Map.jpg" alt="General Map">
+                                <canvas id="game-map-canvas"></canvas>
+                            </div>
+                        </div>
 
-                <div class="feedback" id="feedback"></div>
+                        <!-- Options view (shown after clicking a zone) -->
+                        <div id="options-view" class="options-view" style="display: none;">
+                            <div class="options-header">
+                                <h3 id="selected-zone-name">Zone Name</h3>
+                                <button id="back-to-map-btn" class="btn btn-secondary btn-small">Back to Map</button>
+                            </div>
+                            <div class="options-container" id="options-container">
+                                <!-- Options will be generated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Next Question Button (Host only, shown when all answered) -->
                 <div id="next-question-container" style="display: none; text-align: center; margin-top: 20px;">
