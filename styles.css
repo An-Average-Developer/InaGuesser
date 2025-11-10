@@ -208,7 +208,7 @@ main {
 
 .location-image-container {
     width: 100%;
-    max-height: 350px;
+    height: 350px;
     overflow: hidden;
     border-radius: 10px;
     margin-bottom: 15px;
@@ -218,13 +218,14 @@ main {
     justify-content: center;
     border: 3px solid #667eea;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    position: relative;
 }
 
 .location-image-container img {
     width: 100%;
-    height: auto;
-    max-height: 350px;
-    object-fit: contain;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
 }
 
 .instructions {

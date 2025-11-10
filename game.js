@@ -537,6 +537,9 @@ function loadMultiplayerQuestion() {
     // Update game badge
     gameBadge.textContent = currentGame;
 
+    // Apply random zoom to the location image
+    applyRandomZoom(locationImage);
+
     // Update map to current game's general map
     gameMapImage.src = games[currentGame].generalMap;
 
@@ -645,8 +648,9 @@ function loadQuestion() {
     // Update game badge
     gameBadge.textContent = currentGame;
 
-    // Show the location image to find
+    // Show the location image to find with random zoom
     locationImage.src = currentLocation.image;
+    applyRandomZoom(locationImage);
 
     // Update map to current game's general map
     gameMapImage.src = games[currentGame].generalMap;
@@ -658,6 +662,19 @@ function loadQuestion() {
     // Remove any previous click highlights
     const existingHighlights = gameMapContainer.querySelectorAll('.zone-click-highlight');
     existingHighlights.forEach(h => h.remove());
+}
+
+function applyRandomZoom(imageElement) {
+    // Random zoom level between 1.2x and 2.5x
+    const zoomLevel = 1.2 + Math.random() * 1.3; // 1.2 to 2.5
+
+    // Random position to focus on (0-100%)
+    const posX = Math.random() * 100;
+    const posY = Math.random() * 100;
+
+    // Use transform-origin to zoom from different points
+    imageElement.style.transformOrigin = `${posX}% ${posY}%`;
+    imageElement.style.transform = `scale(${zoomLevel})`;
 }
 
 function initGameMapClickHandler() {
